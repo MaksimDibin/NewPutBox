@@ -1,4 +1,4 @@
-package ru.dibin.connectingDB;
+package ru.dibin.implementsClass;
 
 import java.sql.Connection;
 import java.sql.SQLException;

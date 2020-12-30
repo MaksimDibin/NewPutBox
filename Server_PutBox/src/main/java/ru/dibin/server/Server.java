@@ -24,11 +24,10 @@ public class Server {
                         @Override
                         protected void initChannel(SocketChannel socketChannel) {
                             ChannelPipeline pipeline = socketChannel.pipeline ( );
-                            pipeline.addLast (  ); //Скоро займусь сервером.
+                            pipeline.addLast ( new ProtoHandler () );
                         }
                     } ).option ( ChannelOption.SO_BACKLOG, 50 ).childOption ( ChannelOption.SO_KEEPALIVE, true );
             ChannelFuture f = sb.bind ( port ).sync ( );
-
 
             f.channel ( ).closeFuture ( ).sync ( );
         } finally {

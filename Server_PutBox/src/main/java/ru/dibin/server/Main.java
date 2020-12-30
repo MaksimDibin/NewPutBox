@@ -1,6 +1,4 @@
-package ru.dibin;
-
-import ru.dibin.server.Server;
+package ru.dibin.server;
 
 public class Main {
     public static void main(String[] args) {

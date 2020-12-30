@@ -1,5 +1,7 @@
 package ru.dibin.connectingDB;
 
+import ru.dibin.implementsClass.BD;
+
 import java.io.FileInputStream;
 import java.sql.*;
 import java.util.logging.Level;
@@ -7,8 +9,9 @@ import java.util.logging.LogManager;
 import java.util.logging.Logger;
 
 public class DataBaseConnection implements BD {
+
     static Logger LOGGER;
-    public ConnectingToOutbox connectingToOutbox;
+    public Connection connection = startBD ( );
 
     static {
         try (FileInputStream ins = new FileInputStream ( "C:\\PutBox\\log.config" )) {
@@ -22,10 +25,6 @@ public class DataBaseConnection implements BD {
     @Override
     public Connection startBD() {
 
-        Connection connection = null;
-
-        assert false;
-
         try {
             Class.forName ( "com.mysql.jdbc.Driver" );
         } catch (ClassNotFoundException e) {
@@ -33,9 +32,9 @@ public class DataBaseConnection implements BD {
         }
         try {
             DriverManager.registerDriver ( new com.mysql.jdbc.Driver ( ) );
-            connection = DriverManager.getConnection ( "jdbc:mysql://localhost:3306/base_auth", "root", "" );
+            connection = DriverManager.getConnection ( "jdbc:mysql://localhost:3306/base_auth?useSSL=false", "root", "" );
         } catch (SQLException throwables) {
-            LOGGER.log ( Level.WARNING, "Не получилось подключиться к баазе данных \"base_auth\"." );
+            LOGGER.log ( Level.WARNING, "Не получилось подключиться к баазе данных \"base_auth\"" );
         }
         return connection;
     }
@@ -43,33 +42,30 @@ public class DataBaseConnection implements BD {
     @Override
     public String createAnAccount(String nickName, String login, String password) throws SQLException {
 
-        Connection connection = startBD ( );
         PreparedStatement prepareStatement =
                 connection.prepareStatement ( "SELECT nickName FROM bd where nickName = ?" ); // решить вопрос!!! Есть два пользователя с разными никами, но при этом одинаковыми логинами и паролями.
         prepareStatement.setString ( 1, nickName );
         ResultSet resultSet = prepareStatement.executeQuery ( );
-        while (resultSet.next ( )) {
-            if (resultSet.getString ( "nickName" ) != null) {
-                System.out.println ( "Пользователь с таким ником уже есть." );
-                connectingToOutbox.repeatedCreateAnAccount ( login, password );
-            } else {
-                connection.setAutoCommit ( false );
-                try {
-                    PreparedStatement preparedStatement =
-                            connection.prepareStatement ( "INSERT INTO bd (nickName, login, password)"
-                                    + " VALUES ( ?, ?, ? )" );
-                    preparedStatement.setString ( 1, nickName );
-                    preparedStatement.setString ( 2, login );
-                    preparedStatement.setString ( 3, password );
-                    preparedStatement.executeUpdate ( );
-                    connection.commit ( );
-                    LOGGER.log ( Level.INFO, "Клиент под ником " + nickName + " зарегистрировался." );
-                } catch (SQLException e) {
-                    connection.rollback ( );
-                }
-                prepareStatement.close ( );
-                connection.close ( );
+        if (resultSet.next ( )) {
+            System.out.println ( "Пользователь с таким ником уже есть" );
+            return null;
+        } else {
+            connection.setAutoCommit ( false );
+            try {
+                PreparedStatement preparedStatement =
+                        connection.prepareStatement ( "INSERT INTO bd (nickName, login, password)"
+                                + " VALUES ( ?, ?, ? )" );
+                preparedStatement.setString ( 1, nickName );
+                preparedStatement.setString ( 2, login );
+                preparedStatement.setString ( 3, password );
+                preparedStatement.executeUpdate ( );
+                connection.commit ( );
+                LOGGER.log ( Level.INFO, "Клиент под ником " + nickName + " зарегистрировался" );
+            } catch (SQLException e) {
+                connection.rollback ( );
             }
+            prepareStatement.close ( );
+            connection.close ( );
         }
         return nickName;
     }
@@ -77,23 +73,16 @@ public class DataBaseConnection implements BD {
     @Override
     public String signIn(String login, String password) throws SQLException {
 
-        Connection connection = startBD ( );
         PreparedStatement preparedStatement;
         preparedStatement = connection.prepareStatement ( "SELECT nickName  FROM bd where login = ?" +
                 " and password = ?" ); // Проблема с двумя пользователями осталось открытой, надо решить.
         preparedStatement.setString ( 1, login );
         preparedStatement.setString ( 2, password );
         ResultSet resultSet = preparedStatement.executeQuery ( );
-        while (resultSet.next ( )) {
-            if (resultSet.getString ( "nickName" ) != null) {
-                LOGGER.log ( Level.INFO, "Клиент под ником " + resultSet.getString ( "nickName" )
-                        + " вошел в систему." );
-                preparedStatement.close ( );
-                return resultSet.getString ( "nickName" );
-            } else {
-                System.out.println ( "Неверный логин или пароль." );
-                connectingToOutbox.repeatedAuthorization ( );
-            }
+        if (resultSet.next ( )) {
+            LOGGER.log ( Level.INFO, "Клиент под ником " + resultSet.getString ( "nickName" )
+                    + " вошел в систему." );
+            return resultSet.getString ( "nickName" );
         }
         try {
             preparedStatement.close ( );
@@ -101,26 +90,26 @@ public class DataBaseConnection implements BD {
         } catch (SQLException throwables) {
             throwables.printStackTrace ( );
         }
+        System.out.println ( "Неправильный логин или пароль" );
         return null;
     }
 
     @Override
     public void deletingAnAccount(String login, String password) throws SQLException {
-        Connection connection = startBD ( );
         PreparedStatement preparedStatement;
         connection.setAutoCommit ( false );
         try {
             preparedStatement = connection.prepareStatement ( "DELETE FROM bd where login = ? and password = ?" );
             preparedStatement.setString ( 1, login );
             preparedStatement.setString ( 2, password );
-            int val = preparedStatement.executeUpdate ( );
+            preparedStatement.executeUpdate ( );
             connection.commit ( );
-            System.out.println ( "Аккаунт удален." );//Позже реализую удаление папки личной после удаление аккаунта.
+            System.out.println ( "Аккаунт удален" );//Позже реализую удаление рабочей папки, после удаление аккаунта.
 
             preparedStatement.close ( );
             connection.close ( );
         } catch (SQLException e) {
-            System.out.println ( "Произошла ошибка, повторите команду позже." );
+            LOGGER.log ( Level.WARNING, "Произошла ошибка, повторите команду позже" );
             connection.rollback ( );
         }
     }
