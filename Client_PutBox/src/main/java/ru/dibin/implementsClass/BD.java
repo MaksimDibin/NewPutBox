@@ -10,5 +10,5 @@ public interface BD {
 
     String signIn(String login, String password) throws SQLException;
 
-    void deletingAnAccount(String login, String password) throws SQLException;
+    String deletingAnAccount(String login, String password) throws SQLException;
 }

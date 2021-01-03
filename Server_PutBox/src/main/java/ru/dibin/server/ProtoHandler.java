@@ -7,6 +7,7 @@ import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.channel.DefaultFileRegion;
 import io.netty.channel.FileRegion;
 
+import org.apache.commons.io.FileUtils;
 import java.io.*;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
@@ -24,8 +25,10 @@ public class ProtoHandler extends ChannelInboundHandlerAdapter {
     private BufferedOutputStream out;
     private byte read;
     private Path path;
-    private String nameFolder;
     static Logger LOGGER;
+    private File file;
+    private byte[] fileName;
+    private boolean result;
 
     static {
         try (FileInputStream ins = new FileInputStream ( "C:\\PutBox\\log.config" )) {
@@ -54,9 +57,24 @@ public class ProtoHandler extends ChannelInboundHandlerAdapter {
                         currentState = State.LENGTH_WORK_FOLDER;
                         receivedFileLength = 0L;
                         LOGGER.log ( Level.INFO, "Началось скачивание файла" );
+                        break;
+                    case 15:
+                        currentState = State.LENGTH_WORK_FOLDER;
+                        LOGGER.log ( Level.INFO, "Происходит поиск файлов" );
+                        break;
+                    case 16:
+                        currentState = State.LENGTH_WORK_FOLDER;
+                        LOGGER.log ( Level.INFO, "Удаление файла" );
+                        break;
+                    case 17:
+                        currentState = State.LENGTH_WORK_FOLDER;
+                        LOGGER.log ( Level.INFO, "Удаление рабочей папки" );
+                        break;
                     default:
                         LOGGER.log ( Level.WARNING, "Неизвестная команда: " + read );
+                        break;
                 }
+                break;
             }
         }
 
@@ -73,10 +91,32 @@ public class ProtoHandler extends ChannelInboundHandlerAdapter {
                 LOGGER.log ( Level.INFO, "Проверяется наличе рабочей папки" );
                 byte[] fileName = new byte[ lengthWorkFolder ];
                 buf.readBytes ( fileName );
-                nameFolder = new String ( fileName, StandardCharsets.UTF_8 );
-                File file = new File ( "C:\\PutBox\\Server_PutBox\\src\\main\\java\\ru\\WorkFolder\\" + nameFolder );
+                String nameFolder = new String ( fileName, StandardCharsets.UTF_8 );
+                file = new File ( "C:\\PutBox\\WorkFolder\\" + nameFolder );
                 if (file.mkdir ( )) LOGGER.log ( Level.INFO, "Создана рабочая папка " + nameFolder );
-                currentState = State.NAME_LENGTH;
+                if (read == 13 || read == 14 || read == 16) currentState = State.NAME_LENGTH;
+                if (read == 15) currentState = State.LIST_OF_FILES;
+                if (read == 17) currentState = State.DELETE_WORK_FOLDER;
+            }
+        }
+
+        if(currentState == State.DELETE_WORK_FOLDER){
+            FileUtils.deleteDirectory(new File( String.valueOf ( file ) ));
+            currentState = State.IDLE;
+        }
+
+        if (currentState == State.LIST_OF_FILES) {
+            if (file.isDirectory ( )) {
+                File[] list = file.listFiles ( );
+                if (list != null) {
+                    for ( File name : list ) {
+                        buf.writeLong ( name.getName ( ).length ( ) );
+                        ctx.writeAndFlush ( buf );
+                        ctx.writeAndFlush ( name.getName ( ) );
+                    }
+                }
+                LOGGER.log ( Level.INFO, "Список файлов передался" );
+                currentState = State.IDLE;
             }
         }
 
@@ -90,10 +130,14 @@ public class ProtoHandler extends ChannelInboundHandlerAdapter {
 
         if (currentState == State.NAME) {
             if (buf.readableBytes ( ) >= nextLength) {
-                byte[] fileName = new byte[ nextLength ];
+                fileName = new byte[ nextLength ];
                 buf.readBytes ( fileName );
                 LOGGER.log ( Level.INFO, "Получено имя файла - " + new String ( fileName, StandardCharsets.UTF_8 ) );
-                path = Path.of ( nameFolder, new String ( fileName ) );
+                String namePath = String.valueOf ( file );
+                path = Path.of ( namePath, new String ( fileName, StandardCharsets.UTF_8 ) );
+                if (read == 16) {
+                    currentState = State.DELETE_FILE;
+                }
                 if (read == 13) {
                     try {
                         out = new BufferedOutputStream ( new FileOutputStream ( path.toFile ( ) ) );
@@ -104,6 +148,29 @@ public class ProtoHandler extends ChannelInboundHandlerAdapter {
                 }
                 if (read == 14) {
                     currentState = State.VERIFY_FAIL_PRESENCE;
+                }
+            }
+
+            if (currentState == State.DELETE_FILE) {
+                File[] list = file.listFiles ( );
+                for ( File value : list )
+                    if (value.getName ().equals ( new String ( fileName, StandardCharsets.UTF_8 ) ) && value.isFile ( )) {
+                       if(value.delete ())
+                        result = true;
+                        break;
+                    }
+                if (result) {
+                    byteBuf = ByteBufAllocator.DEFAULT.directBuffer ( 1 );
+                    byteBuf.writeByte ( (byte) 16 );
+                    ctx.writeAndFlush ( byteBuf );
+                    LOGGER.log ( Level.INFO, "Файл удален" );
+                    currentState = State.IDLE;
+                } else {
+                    byteBuf = ByteBufAllocator.DEFAULT.directBuffer ( 1 );
+                    byteBuf.writeByte ( (byte) 21 );
+                    ctx.writeAndFlush ( byteBuf );
+                    LOGGER.log ( Level.INFO, "Файл не найден" );
+                    currentState = State.IDLE;
                 }
             }
 
@@ -131,13 +198,13 @@ public class ProtoHandler extends ChannelInboundHandlerAdapter {
             if (currentState == State.VERIFY_FAIL_PRESENCE) {
                 if (Files.exists ( path )) {
                     byteBuf = ByteBufAllocator.DEFAULT.directBuffer ( 1 );
-                    byteBuf.writeByte ( (byte) 13 );
+                    byteBuf.writeByte ( (byte) 14 );
                     ctx.writeAndFlush ( byteBuf );
-                    LOGGER.log ( Level.INFO, "Проверка наличия файла" );
+                    LOGGER.log ( Level.INFO, "Файл найден" );
                     currentState = State.FILE_DISPATCH;
                 } else {
                     byteBuf = ByteBufAllocator.DEFAULT.directBuffer ( 1 );
-                    byteBuf.writeByte ( (byte) 14 );
+                    byteBuf.writeByte ( (byte) 19 );
                     ctx.writeAndFlush ( byteBuf );
                     LOGGER.log ( Level.INFO, "Файл не найден" );
                     currentState = State.IDLE;
@@ -154,6 +221,7 @@ public class ProtoHandler extends ChannelInboundHandlerAdapter {
                 LOGGER.log ( Level.INFO, "Файл загружен" );
             }
         }
+
         if (buf.readableBytes ( ) == 0) {
             buf.release ( );
         }

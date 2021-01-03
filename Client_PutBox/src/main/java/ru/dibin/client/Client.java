@@ -1,30 +1,17 @@
 package ru.dibin.client;
 
 import ru.dibin.connectingDB.DataBaseConnection;
+import ru.dibin.serviceCommand.ServiceCommand;
 
 import java.io.*;
 import java.net.Socket;
-import java.nio.charset.StandardCharsets;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.Paths;
 import java.sql.SQLException;
 import java.util.Scanner;
-import java.util.logging.Level;
-import java.util.logging.LogManager;
-import java.util.logging.Logger;
 
 public class Client {
 
-    static Logger LOGGER;
-
-    static {
-        try (FileInputStream ins = new FileInputStream ( "C:\\PutBox\\log.config" )) {
-            LogManager.getLogManager ( ).readConfiguration ( ins );
-            LOGGER = Logger.getLogger ( Client.class.getName ( ) );
-        } catch (Exception e) {
-            e.printStackTrace ( );
-        }
+    public static void main(String[] args) {
+        new Client ( ).start ( "localhost", 8180 );
     }
 
     private boolean active = true;
@@ -70,11 +57,19 @@ public class Client {
                         }
                         break;
                     case 3:
-                        System.out.println ( "Для подтверждения удаления аккаунта введите логин" );
-                        login = sc.next ( );
-                        System.out.println ( "и пароль" );
-                        password = sc.next ( );
-                        new DataBaseConnection ( ).deletingAnAccount ( login, password );
+                        while (!success) {
+                            System.out.println ( "Для подтверждения удаления аккаунта введите логин" );
+                            login = sc.next ( );
+                            System.out.println ( "и пароль" );
+                            password = sc.next ( );
+                            nickName = new DataBaseConnection ( ).deletingAnAccount ( login, password );
+                            new ServiceCommand ( nickName, input, out ).deleteWorkFolder ( );
+                            if (nickName != null){
+                                new ServiceCommand ( "quite", nickName, input, out ).command ( );
+                                System.exit ( 0 );
+                            }
+                            System.out.println ( "Неправильный логин или пароль" );
+                        }
                         break;
                 }
             } else {
@@ -87,75 +82,7 @@ public class Client {
                 System.out.println ( "Введите команду" );
                 System.out.println ( "Если нужна помощь, введите \"help\"" );
                 String command = sc.next ( );
-                if (command.equals ( "help" )) {
-                    System.out.println ( "Для работы с приложением необходимо вводить служебные команды." +
-                            "Для отправки файла или каталога нужно написать \"transfer_to\"" +
-                            " Для просмотра списка каталогов и файлов введите \"transition\"" +
-                            ". Для копирование файла или каталога введите \"copy\"" +
-                            " Для выхода из \"PutBox\" введите \"quite\"\n" );
-                }
-
-                if (command.equals ( "transition" )) {
-
-
-                }
-
-                if (command.equals ( "quite" )) {
-                    active = false;
-                    LOGGER.log ( Level.INFO, nickName + " вышел из приложения" );
-                    sc.close ( );
-                }
-
-                if (command.equals ( "transfer_to" )) {
-                    System.out.println ( "Укажите путь к файлу, который хотите передать" );
-                    String str = sc.next ( );
-                    Path path = Paths.get ( str );
-                    out.writeByte ( 13 );
-                    int workFolderLength = nickName.length ( );
-                    out.writeInt ( workFolderLength );
-                    out.write ( nickName.getBytes ( StandardCharsets.UTF_8 ) );
-                    String fileName = path.getFileName ( ).toString ( );
-                    int fileLength = fileName.length ( );
-                    out.writeInt ( fileLength );
-                    out.write ( fileName.getBytes ( StandardCharsets.UTF_8 ) );
-                    long fileSize = Files.size ( path );
-                    out.writeLong ( fileSize );
-                    byte[] bytes = new byte[ 256 ];
-                    try (InputStream inputStream = new FileInputStream ( path.toFile ( ) )) {
-                        int array;
-                        while ((array = inputStream.read ( bytes )) != 1) {
-                            out.write ( bytes, 0, array );
-                        }
-                    }
-                }
-
-                if (command.equals ( "copy" )) {
-                    System.out.println ( "Введите название файла с расширением! Пример test.txt" );
-                    String str = sc.next ();
-                    out.write ( 14 );
-                    int workFolderLength = nickName.length ( );
-                    out.writeInt ( workFolderLength );
-                    out.write ( nickName.getBytes ( StandardCharsets.UTF_8 ) );
-                    int fileNameLength = str.length ( );
-                    out.writeInt ( fileNameLength );
-                    out.write ( str.getBytes ( ) );
-                    byte inputByte = input.readByte ( );
-                    if (inputByte == 14) {
-                        System.out.println ( "Файл найден, идет загрузка..." );
-                    } else {
-                        System.out.println ( "Файл не найден, проверьте правильно ввели имя файла" );
-                        return;
-                    }
-                    long fileSize = input.readLong ( );
-                    Path path = Paths.get ( nickName, str );
-                    try (BufferedOutputStream bufferedOutputStream
-                                 = new BufferedOutputStream ( new FileOutputStream ( path.toFile ( ) ) )) {
-                        for ( int i = 0 ; i < fileSize ; i++ ) {
-                            bufferedOutputStream.write ( input.readByte ( ) );
-                        }
-                    }
-                    System.out.println ( "Файл успешно загружен" );
-                }
+                active = new ServiceCommand ( command, nickName, input, out ).command ( );
             }
         } catch (IOException | SQLException e) {
             e.printStackTrace ( );

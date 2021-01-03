@@ -95,7 +95,9 @@ public class DataBaseConnection implements BD {
     }
 
     @Override
-    public void deletingAnAccount(String login, String password) throws SQLException {
+    public String deletingAnAccount(String login, String password) throws SQLException {
+
+        String nickName = signIn ( login, password );
         PreparedStatement preparedStatement;
         connection.setAutoCommit ( false );
         try {
@@ -104,13 +106,13 @@ public class DataBaseConnection implements BD {
             preparedStatement.setString ( 2, password );
             preparedStatement.executeUpdate ( );
             connection.commit ( );
-            System.out.println ( "Аккаунт удален" );//Позже реализую удаление рабочей папки, после удаление аккаунта.
-
+            System.out.println ( "Аккаунт удален" );
             preparedStatement.close ( );
             connection.close ( );
         } catch (SQLException e) {
             LOGGER.log ( Level.WARNING, "Произошла ошибка, повторите команду позже" );
             connection.rollback ( );
         }
+        return nickName;
     }
 }
