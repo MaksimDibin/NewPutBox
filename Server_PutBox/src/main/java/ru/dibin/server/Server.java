@@ -10,7 +10,7 @@ import io.netty.channel.socket.nio.NioServerSocketChannel;
 public class Server {
     public static void main(String[] args) {
         try {
-            new Server (  ).start (8180);
+            new Server ( ).start ( 8180 );
         } catch (Exception e) {
             e.printStackTrace ( );
         }
@@ -27,7 +27,7 @@ public class Server {
                         @Override
                         protected void initChannel(SocketChannel socketChannel) {
                             ChannelPipeline pipeline = socketChannel.pipeline ( );
-                            pipeline.addLast ( new ProtoHandler () );
+                            pipeline.addLast ( new ProtoHandler ( ) );
                         }
                     } ).option ( ChannelOption.SO_BACKLOG, 50 ).childOption ( ChannelOption.SO_KEEPALIVE, true );
             ChannelFuture f = sb.bind ( port ).sync ( );

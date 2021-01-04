@@ -8,6 +8,8 @@ import io.netty.channel.DefaultFileRegion;
 import io.netty.channel.FileRegion;
 
 import org.apache.commons.io.FileUtils;
+import ru.dibin.enumClass.State;
+
 import java.io.*;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
@@ -15,6 +17,8 @@ import java.nio.file.Path;
 import java.util.logging.Level;
 import java.util.logging.LogManager;
 import java.util.logging.Logger;
+
+import static ru.dibin.enumClass.Signal.*;
 
 public class ProtoHandler extends ChannelInboundHandlerAdapter {
     private State currentState = State.IDLE;
@@ -94,14 +98,15 @@ public class ProtoHandler extends ChannelInboundHandlerAdapter {
                 String nameFolder = new String ( fileName, StandardCharsets.UTF_8 );
                 file = new File ( "C:\\PutBox\\WorkFolder\\" + nameFolder );
                 if (file.mkdir ( )) LOGGER.log ( Level.INFO, "Создана рабочая папка " + nameFolder );
-                if (read == 13 || read == 14 || read == 16) currentState = State.NAME_LENGTH;
-                if (read == 15) currentState = State.LIST_OF_FILES;
-                if (read == 17) currentState = State.DELETE_WORK_FOLDER;
+                if (read == SEND.getI ( ) || read == COPY.getI ( ) || read == DELETE_FILE.getI ( ))
+                    currentState = State.NAME_LENGTH;
+                if (read == LIST.getI ( )) currentState = State.LIST_OF_FILES;
+                if (read == DELETE_WORK_FOLDER.getI ( )) currentState = State.DELETE_WORK_FOLDER;
             }
         }
 
-        if(currentState == State.DELETE_WORK_FOLDER){
-            FileUtils.deleteDirectory(new File( String.valueOf ( file ) ));
+        if (currentState == State.DELETE_WORK_FOLDER) {
+            FileUtils.deleteDirectory ( new File ( String.valueOf ( file ) ) );
             currentState = State.IDLE;
         }
 
@@ -135,10 +140,10 @@ public class ProtoHandler extends ChannelInboundHandlerAdapter {
                 LOGGER.log ( Level.INFO, "Получено имя файла - " + new String ( fileName, StandardCharsets.UTF_8 ) );
                 String namePath = String.valueOf ( file );
                 path = Path.of ( namePath, new String ( fileName, StandardCharsets.UTF_8 ) );
-                if (read == 16) {
+                if (read == DELETE_FILE.getI ( )) {
                     currentState = State.DELETE_FILE;
                 }
-                if (read == 13) {
+                if (read == SEND.getI ( )) {
                     try {
                         out = new BufferedOutputStream ( new FileOutputStream ( path.toFile ( ) ) );
                     } catch (FileNotFoundException e) {
@@ -146,7 +151,7 @@ public class ProtoHandler extends ChannelInboundHandlerAdapter {
                     }
                     currentState = State.FILE_LENGTH;
                 }
-                if (read == 14) {
+                if (read == COPY.getI ( )) {
                     currentState = State.VERIFY_FAIL_PRESENCE;
                 }
             }
@@ -154,14 +159,14 @@ public class ProtoHandler extends ChannelInboundHandlerAdapter {
             if (currentState == State.DELETE_FILE) {
                 File[] list = file.listFiles ( );
                 for ( File value : list )
-                    if (value.getName ().equals ( new String ( fileName, StandardCharsets.UTF_8 ) ) && value.isFile ( )) {
-                       if(value.delete ())
-                        result = true;
+                    if (value.getName ( ).equals ( new String ( fileName, StandardCharsets.UTF_8 ) ) && value.isFile ( )) {
+                        if (value.delete ( ))
+                            result = true;
                         break;
                     }
                 if (result) {
                     byteBuf = ByteBufAllocator.DEFAULT.directBuffer ( 1 );
-                    byteBuf.writeByte ( (byte) 16 );
+                    byteBuf.writeByte ( DELETE_FILE.getI ( ) );
                     ctx.writeAndFlush ( byteBuf );
                     LOGGER.log ( Level.INFO, "Файл удален" );
                     currentState = State.IDLE;
@@ -198,7 +203,7 @@ public class ProtoHandler extends ChannelInboundHandlerAdapter {
             if (currentState == State.VERIFY_FAIL_PRESENCE) {
                 if (Files.exists ( path )) {
                     byteBuf = ByteBufAllocator.DEFAULT.directBuffer ( 1 );
-                    byteBuf.writeByte ( (byte) 14 );
+                    byteBuf.writeByte ( COPY.getI ( ) );
                     ctx.writeAndFlush ( byteBuf );
                     LOGGER.log ( Level.INFO, "Файл найден" );
                     currentState = State.FILE_DISPATCH;

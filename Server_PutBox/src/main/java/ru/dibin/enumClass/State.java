@@ -1,4 +1,4 @@
-package ru.dibin.server;
+package ru.dibin.enumClass;
 
 public enum State {
     IDLE,

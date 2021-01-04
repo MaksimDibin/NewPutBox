@@ -63,8 +63,8 @@ public class Client {
                             System.out.println ( "и пароль" );
                             password = sc.next ( );
                             nickName = new DataBaseConnection ( ).deletingAnAccount ( login, password );
-                            new ServiceCommand ( nickName, input, out ).deleteWorkFolder ( );
-                            if (nickName != null){
+                            new ServiceCommand ( "deleteAll", nickName, input, out ).command ( );
+                            if (nickName != null) {
                                 new ServiceCommand ( "quite", nickName, input, out ).command ( );
                                 System.exit ( 0 );
                             }
