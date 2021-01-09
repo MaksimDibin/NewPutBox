@@ -15,14 +15,15 @@ public class Client {
     }
 
     private boolean active = true;
-    private boolean success = false;
     private String nickName;
+    private Socket socket;
+    private boolean isSuccess = false;
 
     public void start(String HOST, int PORT) {
 
         new DataBaseConnection ( ).startBD ( );
         try {
-            Socket socket = new Socket ( HOST, PORT );
+            socket = new Socket ( HOST, PORT );
             DataOutputStream out = new DataOutputStream ( socket.getOutputStream ( ) );
             DataInputStream input = new DataInputStream ( socket.getInputStream ( ) );
             Scanner sc = new Scanner ( System.in );
@@ -35,17 +36,18 @@ public class Client {
                 String password;
                 switch (number) {
                     case 1:
-                        while (!success) {
+                        new Thread ( this::timiIsOut ).start ( );
+                        while (!isSuccess) {
                             System.out.println ( "Введите логин" );
                             login = sc.next ( );
                             System.out.println ( "Введите пароль" );
                             password = sc.next ( );
                             nickName = new DataBaseConnection ( ).signIn ( login, password );
-                            if (nickName != null) success = true;
+                            if (nickName != null) isSuccess = true;
                         }
                         break;
                     case 2:
-                        while (!success) {
+                        while (!isSuccess) {
                             System.out.println ( "Введите nickName" );
                             String nick = sc.next ( );
                             System.out.println ( "Введите логин" );
@@ -53,22 +55,21 @@ public class Client {
                             System.out.println ( "Введите пароль" );
                             password = sc.next ( );
                             nickName = new DataBaseConnection ( ).createAnAccount ( nick, login, password );
-                            if (nickName != null) success = true;
+                            if (nickName != null) isSuccess = true;
                         }
                         break;
                     case 3:
-                        while (!success) {
+                        while (!isSuccess) {
                             System.out.println ( "Для подтверждения удаления аккаунта введите логин" );
                             login = sc.next ( );
                             System.out.println ( "и пароль" );
                             password = sc.next ( );
                             nickName = new DataBaseConnection ( ).deletingAnAccount ( login, password );
-                            new ServiceCommand ( "deleteAll", nickName, input, out ).command ( );
                             if (nickName != null) {
+                                new ServiceCommand ( "deleteAll", nickName, input, out ).command ( );
                                 new ServiceCommand ( "quite", nickName, input, out ).command ( );
                                 System.exit ( 0 );
-                            }
-                            System.out.println ( "Неправильный логин или пароль" );
+                            } else System.out.println ( "Неправильный логин или пароль" );
                         }
                         break;
                 }
@@ -84,7 +85,20 @@ public class Client {
                 String command = sc.next ( );
                 active = new ServiceCommand ( command, nickName, input, out ).command ( );
             }
+            System.exit ( 0 );
         } catch (IOException | SQLException e) {
+            e.printStackTrace ( );
+        }
+    }
+
+    public void timiIsOut() {
+        try {
+            Thread.sleep ( 120_000 );
+            if (!isSuccess) {
+                this.socket.close ( );
+                System.exit ( 0 );
+            }
+        } catch (InterruptedException | IOException e) {
             e.printStackTrace ( );
         }
     }

@@ -27,7 +27,7 @@ public class TransitionCommand implements Command {
         int workFolderLength = nickName.length ( );
         out.writeInt ( workFolderLength );
         out.write ( nickName.getBytes ( StandardCharsets.UTF_8 ) );
-        int fileLength = input.readInt ( );
+        int fileLength = input.read ( );
         byte[] nameFile = new byte[ fileLength ];
         for ( int i = 0 ; i < nameFile.length ; i++ ) {
             nameFile[ i ] = input.readByte ( );

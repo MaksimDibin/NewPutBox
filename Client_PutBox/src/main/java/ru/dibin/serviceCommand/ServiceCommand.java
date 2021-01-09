@@ -45,7 +45,7 @@ public class ServiceCommand {
 
         if (command.equals ( "quite" )) {
             LOGGER.log ( Level.INFO, nickName + " вышел из приложения" );
-            System.exit ( 0 );
+            return false;
         }
 
         if (command.equals ( "transfer_to" )) {

@@ -115,8 +115,9 @@ public class ProtoHandler extends ChannelInboundHandlerAdapter {
                 File[] list = file.listFiles ( );
                 if (list != null) {
                     for ( File name : list ) {
-                        buf.writeLong ( name.getName ( ).length ( ) );
-                        ctx.writeAndFlush ( buf );
+                        byteBuf = ByteBufAllocator.DEFAULT.directBuffer ( 1 );
+                        byteBuf.writeInt ( name.getName ( ).length ( ) );
+                        ctx.writeAndFlush ( byteBuf);
                         ctx.writeAndFlush ( name.getName ( ) );
                     }
                 }
@@ -158,6 +159,7 @@ public class ProtoHandler extends ChannelInboundHandlerAdapter {
 
             if (currentState == State.DELETE_FILE) {
                 File[] list = file.listFiles ( );
+                assert list != null;
                 for ( File value : list )
                     if (value.getName ( ).equals ( new String ( fileName, StandardCharsets.UTF_8 ) ) && value.isFile ( )) {
                         if (value.delete ( ))
@@ -172,7 +174,7 @@ public class ProtoHandler extends ChannelInboundHandlerAdapter {
                     currentState = State.IDLE;
                 } else {
                     byteBuf = ByteBufAllocator.DEFAULT.directBuffer ( 1 );
-                    byteBuf.writeByte ( (byte) 21 );
+                    byteBuf.writeByte ( ERROR.getI ( ) );
                     ctx.writeAndFlush ( byteBuf );
                     LOGGER.log ( Level.INFO, "Файл не найден" );
                     currentState = State.IDLE;
@@ -209,7 +211,7 @@ public class ProtoHandler extends ChannelInboundHandlerAdapter {
                     currentState = State.FILE_DISPATCH;
                 } else {
                     byteBuf = ByteBufAllocator.DEFAULT.directBuffer ( 1 );
-                    byteBuf.writeByte ( (byte) 19 );
+                    byteBuf.writeByte ( ERROR.getI ( ) );
                     ctx.writeAndFlush ( byteBuf );
                     LOGGER.log ( Level.INFO, "Файл не найден" );
                     currentState = State.IDLE;
@@ -223,6 +225,7 @@ public class ProtoHandler extends ChannelInboundHandlerAdapter {
                 FileRegion region = new DefaultFileRegion ( path.toFile ( ), 0, Files.size ( path ) );
                 ctx.writeAndFlush ( region );
                 currentState = State.IDLE;
+                receivedFileLength = 0L;
                 LOGGER.log ( Level.INFO, "Файл загружен" );
             }
         }
