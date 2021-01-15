@@ -1,17 +1,16 @@
-package ru.dibin.test;
 
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Test;
 import ru.dibin.connectingDB.DataBaseConnection;
 
 import java.sql.SQLException;
 
-public class TestConnectingBD {
+public class TestConnectingDB {
 
     public DataBaseConnection dataBaseConnection;
 
 
-    @Before
+    @BeforeAll
     public void connectingToOutbox(){
         dataBaseConnection = new DataBaseConnection ();
     }

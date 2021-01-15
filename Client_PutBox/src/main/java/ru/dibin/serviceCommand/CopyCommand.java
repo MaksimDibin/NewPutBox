@@ -38,7 +38,7 @@ public class CopyCommand implements Command {
         if (inputByte == COPY.getI ()) {
             System.out.println ( "Файл найден, идет загрузка..." );
             long fileSize = input.readLong ( );
-            String namePath = "C:\\PutBox\\Тестовая_папка";
+            String namePath = "C:" + File.separator + "PutBox" + File.separator + "Тестовая_папка"; //Заменить путь к файлу
             Path path = Paths.get ( namePath, str );
             try (BufferedOutputStream bufferedOutputStream
                          = new BufferedOutputStream ( new FileOutputStream ( path.toFile ( ) ) )) {

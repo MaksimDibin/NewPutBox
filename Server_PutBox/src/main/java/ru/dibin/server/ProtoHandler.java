@@ -96,12 +96,13 @@ public class ProtoHandler extends ChannelInboundHandlerAdapter {
                 byte[] fileName = new byte[ lengthWorkFolder ];
                 buf.readBytes ( fileName );
                 String nameFolder = new String ( fileName, StandardCharsets.UTF_8 );
-                file = new File ( "C:\\PutBox\\WorkFolder\\" + nameFolder );
+                file = new File ( "C:" + File.separator + "PutBox" + File.separator + "WorkFolder" + File.separator + nameFolder );
+                //Даниил, Вам нужно изменить путь, обратите внимание!!!
                 if (file.mkdir ( )) LOGGER.log ( Level.INFO, "Создана рабочая папка " + nameFolder );
-                if (read == SEND.getI ( ) || read == COPY.getI ( ) || read == DELETE_FILE.getI ( ))
+                if (read == SEND.signalNumber ( ) || read == COPY.signalNumber ( ) || read == DELETE_FILE.signalNumber ( ))
                     currentState = State.NAME_LENGTH;
-                if (read == LIST.getI ( )) currentState = State.LIST_OF_FILES;
-                if (read == DELETE_WORK_FOLDER.getI ( )) currentState = State.DELETE_WORK_FOLDER;
+                if (read == LIST.signalNumber ( )) currentState = State.LIST_OF_FILES;
+                if (read == DELETE_WORK_FOLDER.signalNumber ( )) currentState = State.DELETE_WORK_FOLDER;
             }
         }
 
@@ -117,8 +118,7 @@ public class ProtoHandler extends ChannelInboundHandlerAdapter {
                     for ( File name : list ) {
                         byteBuf = ByteBufAllocator.DEFAULT.directBuffer ( 1 );
                         byteBuf.writeInt ( name.getName ( ).length ( ) );
-                        ctx.writeAndFlush ( byteBuf);
-                        ctx.writeAndFlush ( name.getName ( ) );
+                        ctx.writeAndFlush ( name.getName ());
                     }
                 }
                 LOGGER.log ( Level.INFO, "Список файлов передался" );
@@ -141,10 +141,10 @@ public class ProtoHandler extends ChannelInboundHandlerAdapter {
                 LOGGER.log ( Level.INFO, "Получено имя файла - " + new String ( fileName, StandardCharsets.UTF_8 ) );
                 String namePath = String.valueOf ( file );
                 path = Path.of ( namePath, new String ( fileName, StandardCharsets.UTF_8 ) );
-                if (read == DELETE_FILE.getI ( )) {
+                if (read == DELETE_FILE.signalNumber ( )) {
                     currentState = State.DELETE_FILE;
                 }
-                if (read == SEND.getI ( )) {
+                if (read == SEND.signalNumber ( )) {
                     try {
                         out = new BufferedOutputStream ( new FileOutputStream ( path.toFile ( ) ) );
                     } catch (FileNotFoundException e) {
@@ -152,7 +152,7 @@ public class ProtoHandler extends ChannelInboundHandlerAdapter {
                     }
                     currentState = State.FILE_LENGTH;
                 }
-                if (read == COPY.getI ( )) {
+                if (read == COPY.signalNumber ( )) {
                     currentState = State.VERIFY_FAIL_PRESENCE;
                 }
             }
@@ -168,13 +168,13 @@ public class ProtoHandler extends ChannelInboundHandlerAdapter {
                     }
                 if (result) {
                     byteBuf = ByteBufAllocator.DEFAULT.directBuffer ( 1 );
-                    byteBuf.writeByte ( DELETE_FILE.getI ( ) );
+                    byteBuf.writeByte ( DELETE_FILE.signalNumber ( ) );
                     ctx.writeAndFlush ( byteBuf );
                     LOGGER.log ( Level.INFO, "Файл удален" );
                     currentState = State.IDLE;
                 } else {
                     byteBuf = ByteBufAllocator.DEFAULT.directBuffer ( 1 );
-                    byteBuf.writeByte ( ERROR.getI ( ) );
+                    byteBuf.writeByte ( ERROR.signalNumber ( ) );
                     ctx.writeAndFlush ( byteBuf );
                     LOGGER.log ( Level.INFO, "Файл не найден" );
                     currentState = State.IDLE;
@@ -196,7 +196,7 @@ public class ProtoHandler extends ChannelInboundHandlerAdapter {
                     if (fileLength == receivedFileLength) {
                         currentState = State.IDLE;
                         LOGGER.log ( Level.INFO, "Файл записан" );
-                        out.close ( );
+                        out.flush ();
                         break;
                     }
                 }
@@ -205,13 +205,13 @@ public class ProtoHandler extends ChannelInboundHandlerAdapter {
             if (currentState == State.VERIFY_FAIL_PRESENCE) {
                 if (Files.exists ( path )) {
                     byteBuf = ByteBufAllocator.DEFAULT.directBuffer ( 1 );
-                    byteBuf.writeByte ( COPY.getI ( ) );
+                    byteBuf.writeByte ( COPY.signalNumber ( ) );
                     ctx.writeAndFlush ( byteBuf );
                     LOGGER.log ( Level.INFO, "Файл найден" );
                     currentState = State.FILE_DISPATCH;
                 } else {
                     byteBuf = ByteBufAllocator.DEFAULT.directBuffer ( 1 );
-                    byteBuf.writeByte ( ERROR.getI ( ) );
+                    byteBuf.writeByte ( ERROR.signalNumber ( ) );
                     ctx.writeAndFlush ( byteBuf );
                     LOGGER.log ( Level.INFO, "Файл не найден" );
                     currentState = State.IDLE;

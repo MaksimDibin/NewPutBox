@@ -31,33 +31,28 @@ public class ServiceCommand {
 
     public boolean command() throws IOException {
 
-        if (command.equals ( "help" )) {
-            new HelpCommand ( ).help ( );
-        }
-
-        if (command.equals ( "transition" )) {
-            new TransitionCommand ( nickName, input, out ).start ( );
-        }
-
-        if (command.equals ( "delete" )) {
-            new DeleteCommand ( nickName, input, out ).start ( );
-        }
-
-        if (command.equals ( "quite" )) {
-            LOGGER.log ( Level.INFO, nickName + " вышел из приложения" );
-            return false;
-        }
-
-        if (command.equals ( "transfer_to" )) {
-            new TransferToCommand ( nickName, out ).start ( );
-        }
-
-        if (command.equals ( "copy" )) {
-            new CopyCommand ( nickName, input, out ).start ( );
-        }
-
-        if (command.equals ( "deleteAll" )) {
-            new DeleteWorkFolder ( nickName, out ).start ( );
+        switch (command) {
+            case "help":
+                new HelpCommand ( ).help ( );
+                break;
+            case "transition":
+                new TransitionCommand ( nickName, input, out ).start ( );
+                break;
+            case "delete":
+                new DeleteCommand ( nickName, input, out ).start ( );
+                break;
+            case "quite":
+                LOGGER.log ( Level.INFO, nickName + " вышел из приложения" );
+                return false;
+            case "transfer_to":
+                new TransferToCommand ( nickName, out ).start ( );
+                break;
+            case "copy":
+                new CopyCommand ( nickName, input, out ).start ( );
+                break;
+            case "deleteAll":
+                new DeleteWorkFolder ( nickName, out ).start ( );
+                break;
         }
         return true;
     }

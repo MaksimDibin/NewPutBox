@@ -9,7 +9,7 @@ public enum Signal {
     SEND ( (byte) 13 ),
     LIST ( (byte) 15 );
 
-    public byte getI() {
+    public byte signalNumber() {
         return i;
     }
 
