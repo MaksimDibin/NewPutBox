@@ -14,7 +14,7 @@ public class ServiceCommand {
     private final DataOutputStream out;
 
     static {
-        try (FileInputStream ins = new FileInputStream ( "C:\\PutBox\\log.config" )) {
+        try (InputStream ins = ServiceCommand.class.getClassLoader().getResourceAsStream("log.config")) {
             LogManager.getLogManager ( ).readConfiguration ( ins );
             LOGGER = Logger.getLogger ( ServiceCommand.class.getName ( ) );
         } catch (Exception e) {

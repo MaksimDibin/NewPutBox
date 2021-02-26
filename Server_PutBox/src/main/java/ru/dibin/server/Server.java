@@ -7,6 +7,7 @@ import io.netty.channel.socket.SocketChannel;
 import io.netty.channel.socket.nio.NioServerSocketChannel;
 
 import java.io.FileInputStream;
+import java.io.InputStream;
 import java.util.logging.Level;
 import java.util.logging.LogManager;
 import java.util.logging.Logger;
@@ -17,7 +18,7 @@ public class Server {
     static Logger LOGGER;
 
     static {
-        try (FileInputStream ins = new FileInputStream ( "C:\\PutBox\\log.config" )) {
+        try (InputStream ins = Server.class.getClassLoader().getResourceAsStream("log.config")) {
             LogManager.getLogManager ( ).readConfiguration ( ins );
             LOGGER = Logger.getLogger ( Server.class.getName ( ) );
         } catch (Exception e) {

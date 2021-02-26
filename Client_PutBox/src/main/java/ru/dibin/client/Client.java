@@ -21,7 +21,7 @@ public class Client {
 
     public void start(String HOST, int PORT) {
 
-//        new DataBaseConnection ( ).startBD ( ); Не удалять!
+        new DataBaseConnection ( ).startBD ( );
         try {
             socket = new Socket ( HOST, PORT );
             DataOutputStream out = new DataOutputStream ( socket.getOutputStream ( ) );
@@ -29,10 +29,9 @@ public class Client {
             Scanner sc = new Scanner ( System.in );
             System.out.printf ( "Добро пожаловать в PutBox, для авторизации введите цифру %d," +
                     " для созданние аккаунта введите цифру %d," +
-                    " для удаление аакаунта введите цифру %d," +
-                    " Даниил, для вас введите цифру %d.\n", 1, 2, 3, 4 );
+                    " для удаление аакаунта введите цифру %d,\\n", 1, 2, 3 );
             int number = sc.nextInt ( );
-            if (number <= 4 && number >= 1) {
+            if (number <= 3 && number >= 1) {
                 String login;
                 String password;
                 switch (number) {
@@ -72,10 +71,6 @@ public class Client {
                                 System.exit ( 0 );
                             } else System.out.println ( "Неправильный логин или пароль" );
                         }
-                        break;
-                    case 4:
-                        nickName = "Daniil";
-                        System.out.println ( "Обратите внимание! В классе ProtoHandler, CopyCommand нужно изменить путь к папке" );
                         break;
                 }
             } else {

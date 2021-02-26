@@ -35,7 +35,7 @@ public class ProtoHandler extends ChannelInboundHandlerAdapter {
     private boolean result;
 
     static {
-        try (FileInputStream ins = new FileInputStream ( "C:\\PutBox\\log.config" )) {
+        try (InputStream ins = ProtoHandler.class.getClassLoader().getResourceAsStream("log.config")) {
             LogManager.getLogManager ( ).readConfiguration ( ins );
             LOGGER = Logger.getLogger ( ProtoHandler.class.getName ( ) );
         } catch (Exception e) {
@@ -97,7 +97,6 @@ public class ProtoHandler extends ChannelInboundHandlerAdapter {
                 buf.readBytes ( fileName );
                 String nameFolder = new String ( fileName, StandardCharsets.UTF_8 );
                 file = new File ( "C:" + File.separator + "PutBox" + File.separator + "WorkFolder" + File.separator + nameFolder );
-                //Даниил, Вам нужно изменить путь, обратите внимание!!!
                 if (file.mkdir ( )) LOGGER.log ( Level.INFO, "Создана рабочая папка " + nameFolder );
                 if (read == SEND.signalNumber ( ) || read == COPY.signalNumber ( ) || read == DELETE_FILE.signalNumber ( ))
                     currentState = State.NAME_LENGTH;
@@ -118,7 +117,7 @@ public class ProtoHandler extends ChannelInboundHandlerAdapter {
                     for ( File name : list ) {
                         byteBuf = ByteBufAllocator.DEFAULT.directBuffer ( 1 );
                         byteBuf.writeInt ( name.getName ( ).length ( ) );
-                        ctx.writeAndFlush ( name.getName ());
+                        ctx.writeAndFlush ( name.getName ( ) );
                     }
                 }
                 LOGGER.log ( Level.INFO, "Список файлов передался" );
@@ -190,13 +189,13 @@ public class ProtoHandler extends ChannelInboundHandlerAdapter {
             }
 
             if (currentState == State.FILE) {
-                while (buf.readableBytes ( ) > 0) {
+                while (buf.readableBytes ( ) >= 4) {
                     out.write ( buf.readByte ( ) );
                     receivedFileLength++;
                     if (fileLength == receivedFileLength) {
                         currentState = State.IDLE;
                         LOGGER.log ( Level.INFO, "Файл записан" );
-                        out.flush ();
+                        out.flush ( );
                         break;
                     }
                 }

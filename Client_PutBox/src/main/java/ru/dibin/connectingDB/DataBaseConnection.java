@@ -3,6 +3,7 @@ package ru.dibin.connectingDB;
 import ru.dibin.implementsClass.BD;
 
 import java.io.FileInputStream;
+import java.io.InputStream;
 import java.sql.*;
 import java.util.logging.Level;
 import java.util.logging.LogManager;
@@ -14,7 +15,7 @@ public class DataBaseConnection implements BD {
     public Connection connection = startBD ( );
 
     static {
-        try (FileInputStream ins = new FileInputStream ( "C:\\PutBox\\log.config" )) {
+        try (InputStream ins = DataBaseConnection.class.getClassLoader().getResourceAsStream("log.config")) {
             LogManager.getLogManager ( ).readConfiguration ( ins );
             LOGGER = Logger.getLogger ( DataBaseConnection.class.getName ( ) );
         } catch (Exception e) {
